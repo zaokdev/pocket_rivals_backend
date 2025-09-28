@@ -1,4 +1,6 @@
 from typing import Optional
+from sqlalchemy import DateTime, Enum
+import enum
 import datetime
 
 from sqlalchemy import (
@@ -134,4 +136,55 @@ class PokemonOwned(Base):
     player: Mapped["Player"] = relationship("Player", back_populates="pokemon_owned")
     pokemon_stat: Mapped["PokemonStat"] = relationship(
         "PokemonStat", back_populates="pokemon_owned"
+    )
+
+
+class TradeStatus(enum.Enum):
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+
+
+class Trade(Base):
+    __tablename__ = "trade"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["requester_id"], ["player.id"], name="fk_trade_requester"
+        ),
+        ForeignKeyConstraint(["receiver_id"], ["player.id"], name="fk_trade_receiver"),
+        ForeignKeyConstraint(
+            ["requester_pokemon_id"],
+            ["pokemon_owned.id"],
+            name="fk_trade_requester_pokemon",
+        ),
+        ForeignKeyConstraint(
+            ["receiver_pokemon_id"],
+            ["pokemon_owned.id"],
+            name="fk_trade_receiver_pokemon",
+        ),
+        Index("fk_trade_requester", "requester_id"),
+        Index("fk_trade_receiver", "receiver_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    requester_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    receiver_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    requester_pokemon_id: Mapped[str] = mapped_column(String(24), nullable=False)
+    receiver_pokemon_id: Mapped[str] = mapped_column(String(24), nullable=False)
+    status: Mapped[TradeStatus] = mapped_column(
+        Enum(TradeStatus), default=TradeStatus.pending, nullable=False
+    )
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        DateTime, default=datetime.datetime.utcnow
+    )
+    decided_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    requester: Mapped["Player"] = relationship("Player", foreign_keys=[requester_id])
+    receiver: Mapped["Player"] = relationship("Player", foreign_keys=[receiver_id])
+    requester_pokemon: Mapped["PokemonOwned"] = relationship(
+        "PokemonOwned", foreign_keys=[requester_pokemon_id]
+    )
+    receiver_pokemon: Mapped["PokemonOwned"] = relationship(
+        "PokemonOwned", foreign_keys=[receiver_pokemon_id]
     )

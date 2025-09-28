@@ -12,6 +12,7 @@ player = Blueprint("player", __name__)
 bcrypt = Bcrypt()
 
 
+# Registrar nuevo usuario
 @player.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -53,6 +54,7 @@ def register():
         session.close()
 
 
+# Login de usuario
 @player.route("/login", methods=["POST"])
 def login():
     data = request.get_json()

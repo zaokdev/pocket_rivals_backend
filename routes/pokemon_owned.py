@@ -46,6 +46,9 @@ def get_all_owned():
     except Exception as e:
         return jsonify({"message": str(e)}), 500
 
+    finally:
+        session.close()
+
 
 @pokemon_owned.route(
     "/pokemon/users_pokemon/<string:owned_pokemon_id>", methods=["GET"]
