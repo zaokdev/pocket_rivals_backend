@@ -13,6 +13,7 @@ capture_pokemon = Blueprint("capture_pokemon", __name__)
 bcrypt = Bcrypt()
 
 
+# Capturar Pokemon aleatorio
 @capture_pokemon.route("/capture_pokemon", methods=["GET"])
 @jwt_required()
 def get_a_pokemon():
@@ -74,3 +75,6 @@ def get_a_pokemon():
         return jsonify({"message": message}), 201
     except Exception as e:
         return jsonify({"message": str(e)}), 500
+
+    finally:
+        session.close()

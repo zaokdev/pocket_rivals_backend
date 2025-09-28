@@ -49,6 +49,9 @@ def register():
     except Exception as e:
         return jsonify({"message": str(e)}), 400
 
+    finally:
+        session.close()
+
 
 @player.route("/login", methods=["POST"])
 def login():
@@ -82,3 +85,6 @@ def login():
 
     except Exception as e:
         return jsonify({"message": str(e)}), 400
+
+    finally:
+        session.close()
