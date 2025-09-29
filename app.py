@@ -14,11 +14,8 @@ jwt = JWTManager()
 
 load_dotenv()
 
-try:
-    init_db(app)
-    jwt.init_app(app)
-except Exception as e:
-    print(str(e))
+init_db(app)
+jwt.init_app(app)
 
 app.register_blueprint(player)
 app.register_blueprint(capture_pokemon)
