@@ -8,6 +8,7 @@ from models.models import Player, PokemonOwned, PokemonStat
 pokemon_owned = Blueprint("pokemon_owned", __name__)
 
 
+# Usuario loggeado
 @pokemon_owned.route("/pokemon/users_pokemon", methods=["GET"])
 @jwt_required()
 def get_all_owned():
@@ -141,6 +142,7 @@ def other_player_pokemon(player_id):
 @pokemon_owned.route("/pokemon/change_mote", methods=["PUT"])
 @jwt_required()
 def change_mote():
+    session = SessionLocal()
     try:
         data = request.get_json()
 
@@ -150,8 +152,6 @@ def change_mote():
 
         if not owned_pokemon_id or not mote:
             raise ValueError("Missing data")
-
-        session = SessionLocal()
 
         pokemon_data = (
             session.query(PokemonOwned)
@@ -169,7 +169,6 @@ def change_mote():
 
     except Exception as e:
         return jsonify({"message": str(e)}), 500
-
     finally:
         session.close()
 
