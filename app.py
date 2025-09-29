@@ -14,8 +14,11 @@ jwt = JWTManager()
 
 load_dotenv()
 
-init_db(app)
-jwt.init_app(app)
+try:
+    init_db(app)
+    jwt.init_app(app)
+except Exception as e:
+    print(str(e))
 
 app.register_blueprint(player)
 app.register_blueprint(capture_pokemon)
@@ -24,4 +27,4 @@ app.register_blueprint(friends)
 app.register_blueprint(trade)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000)
