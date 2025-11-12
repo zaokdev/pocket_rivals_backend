@@ -81,7 +81,7 @@ def login():
             raise ValueError("Incorrect Password Given")
 
         expires = datetime.timedelta(hours=2)
-        access_token = create_access_token(identity=player.id, expires_delta=expires, additional_claim={"user":player.username})
+        access_token = create_access_token(identity=player.id, expires_delta=expires, additional_claims={"user":player.username})
         session.commit()
         return jsonify({"access_token": access_token}), 200
 
