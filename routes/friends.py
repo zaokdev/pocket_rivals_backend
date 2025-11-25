@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import delete, insert
-from models.models import Player, t_friend
+from models.models import Player, PokemonOwned, PokemonStat, t_friend
 from config.db import SessionLocal
 
 friends = Blueprint("friends", __name__)
@@ -201,13 +201,23 @@ def list_friends():
             friend_id = entry.id2 if entry.id1 == player_id else entry.id1
             friend_player = session.query(Player).filter(Player.id == friend_id).first()
 
+            last_captured = (
+                session.query(PokemonStat.name)
+                .join(PokemonOwned, PokemonOwned.pokedex_number == PokemonStat.pokedex_number)
+                .filter(PokemonOwned.player_id == friend_id)
+                .order_by(PokemonOwned.obtained_at.desc())
+                .first()
+            )
+
             if friend_player:
                 friends.append(
                     {
                         "id": friend_player.id,
                         "username": friend_player.username,
+                        "last_captured": last_captured.name if last_captured else None
                     }
                 )
+
 
         return jsonify({"friends": friends}), 200
 
