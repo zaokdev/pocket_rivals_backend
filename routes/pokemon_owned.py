@@ -18,7 +18,7 @@ def get_all_owned():
 
         pokemon_owned_json = []
         all_pokemon_owned = (
-            session.query(PokemonOwned, PokemonStat.name)
+            session.query(PokemonOwned, PokemonStat)
             .join(
                 PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
             )
@@ -29,16 +29,17 @@ def get_all_owned():
         if not all_pokemon_owned:
             raise ValueError("No pokemon owned")
 
-        for data, name in all_pokemon_owned:
+        for data, stats in all_pokemon_owned:
             pokemon_owned_json.append(
                 {
-                    "name": name,
+                    "name": stats.name,
                     "id": data.id,
                     "player_id": data.player_id,
                     "pokedex_number": data.pokedex_number,
                     "in_team": data.in_team,
                     "obtained_at": data.obtained_at,
                     "mote": data.mote,
+                    "type1": stats.type1,
                 }
             )
 
