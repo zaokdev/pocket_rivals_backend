@@ -94,3 +94,40 @@ def login():
 
     finally:
         session.close()
+
+
+@player.route("/player/change_username", methods=["PUT"])
+@jwt_required()
+def change_username():
+    session = SessionLocal()
+    try:
+        data = request.get_json()
+
+        new_username = data.get("username")
+        player_id = get_jwt_identity()
+
+        if not new_username:
+            return jsonify({"message": "Username missing"}), 400
+
+        existing_player = (
+            session.query(Player).filter(Player.username == new_username).first()
+        )
+
+        if existing_player:
+            return jsonify({"message": "Username already taken"}), 400
+
+        player = session.query(Player).filter(Player.id == player_id).first()
+
+        if not player:
+            return jsonify({"message": "Player not found"}), 404
+
+        player.username = new_username
+        session.commit()
+
+        return jsonify({"message": "Username updated successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+    finally:
+        session.close()
