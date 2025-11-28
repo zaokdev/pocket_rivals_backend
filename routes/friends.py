@@ -28,8 +28,6 @@ def get_requests():
             )
             .all()
         )
-        if not requests:
-            return jsonify({"message": "No friend requests found"}), 404
 
         requests_json = []
         for req in requests:
@@ -38,7 +36,7 @@ def get_requests():
                     "id1": req.id_min,
                     "id2": req.id_max,
                     "petitioner_name": req.username,
-                    "petitoner": req.petitioner,
+                    "petitioner": req.petitioner,
                     "approved": req.approved,
                 }
             )
@@ -93,6 +91,7 @@ def send_request():
 @friends.route("/friends/accept_request", methods=["POST"])
 @jwt_required()
 def accept_request():
+    session = None
     try:
         data = request.get_json()
         friend_id = data.get("friend_id")
@@ -119,13 +118,19 @@ def accept_request():
 
         # Actualizar approved -> 1
         session.execute(
-            t_friend.update()
-            .where(
-                ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
-                | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
-            )
-            .values(approved=1)
+    t_friend.update()
+    .where(
+        (
+            (t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id)
         )
+        | (
+            (t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id)
+        )
+    )
+    .values(approved=1)
+)
+
+
         session.commit()
 
         friend_player = session.query(Player).filter(Player.id == friend_id).first()
@@ -134,10 +139,14 @@ def accept_request():
         return jsonify({"message": f"Friend request with {friend_name} accepted"}), 200
 
     except Exception as e:
+        if session:
+            session.rollback()
         return jsonify({"message": str(e)}), 500
 
     finally:
-        session.close()
+        if session:
+            session.close()
+
 
 
 # RECHAZAR SOLICITUDES
