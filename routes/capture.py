@@ -72,7 +72,17 @@ def get_a_pokemon():
         session.add(owned_pokemon_data)
         session.commit()
 
-        return jsonify({"message": message}), 201
+        return (
+            jsonify(
+                {
+                    "message": message,
+                    "pokedex_number": final_pokedex_number,
+                    "name": final_pokemon.name,
+                }
+            ),
+            201,
+        )
+
     except Exception as e:
         return jsonify({"message": str(e)}), 500
 

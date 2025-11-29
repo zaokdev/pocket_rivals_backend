@@ -127,7 +127,7 @@ CREATE TABLE `pokemon_owned` (
   `player_id` varchar(32) NOT NULL,
   `pokedex_number` int NOT NULL,
   `in_team` tinyint(1) NOT NULL DEFAULT '0',
-  `obtained_at` date NOT NULL,
+  `obtained_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `mote` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `fk_player` (`player_id`),

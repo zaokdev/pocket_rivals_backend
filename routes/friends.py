@@ -118,18 +118,13 @@ def accept_request():
 
         # Actualizar approved -> 1
         session.execute(
-    t_friend.update()
-    .where(
-        (
-            (t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id)
+            t_friend.update()
+            .where(
+                ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
+                | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
+            )
+            .values(approved=1)
         )
-        | (
-            (t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id)
-        )
-    )
-    .values(approved=1)
-)
-
 
         session.commit()
 
@@ -146,7 +141,6 @@ def accept_request():
     finally:
         if session:
             session.close()
-
 
 
 # RECHAZAR SOLICITUDES
@@ -166,12 +160,14 @@ def deny_requests():
         # Eliminar la solicitud
         session.execute(
             delete(t_friend).where(
-                ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
-                | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
-                & t_friend.c.approved
-                == 0
+                (
+                    ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
+                    | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
+                )
+                & (t_friend.c.approved == 0)
             )
         )
+
         session.commit()
 
         return jsonify({"message": f"Friend request denied"}), 200
@@ -212,7 +208,10 @@ def list_friends():
 
             last_captured = (
                 session.query(PokemonStat.name)
-                .join(PokemonOwned, PokemonOwned.pokedex_number == PokemonStat.pokedex_number)
+                .join(
+                    PokemonOwned,
+                    PokemonOwned.pokedex_number == PokemonStat.pokedex_number,
+                )
                 .filter(PokemonOwned.player_id == friend_id)
                 .order_by(PokemonOwned.obtained_at.desc())
                 .first()
@@ -223,10 +222,9 @@ def list_friends():
                     {
                         "id": friend_player.id,
                         "username": friend_player.username,
-                        "last_captured": last_captured.name if last_captured else None
+                        "last_captured": last_captured.name if last_captured else None,
                     }
                 )
-
 
         return jsonify({"friends": friends}), 200
 

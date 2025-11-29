@@ -23,6 +23,7 @@ def get_all_owned():
                 PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
             )
             .filter(PokemonOwned.player_id == player_id)
+            .order_by(PokemonOwned.obtained_at.desc())
             .all()
         )
 

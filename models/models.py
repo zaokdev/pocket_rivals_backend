@@ -130,7 +130,7 @@ class PokemonOwned(Base):
     player_id: Mapped[str] = mapped_column(String(32), nullable=False)
     pokedex_number: Mapped[int] = mapped_column(Integer, nullable=False)
     in_team: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
-    obtained_at: Mapped[datetime.date] = mapped_column(Date, nullable=False)
+    obtained_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     mote: Mapped[Optional[str]] = mapped_column(String(20))
 
     player: Mapped["Player"] = relationship("Player", back_populates="pokemon_owned")
