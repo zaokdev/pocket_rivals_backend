@@ -278,7 +278,7 @@ def get_pending_trades():
         return jsonify(result), 200
 
     except Exception as e:
-        print("🔥 ERROR EN TRADE REQUESTS:", e)
+        print("ERROR EN TRADE REQUESTS:", e)
         return jsonify({"message": str(e)}), 500
 
     finally:

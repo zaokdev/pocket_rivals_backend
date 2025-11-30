@@ -4,13 +4,18 @@ from extensions import socketio
 connected_users = {}
 
 
+@socketio.on("connect")
+def handle_connect():
+    print("Cliente conectado:", request.sid)
+
+
 @socketio.on("connect_user")
 def connect_user(data):
     user_id = data.get("user_id")
     sid = request.sid
 
     connected_users[user_id] = sid
-    print(f"Usuario {user_id} conectado con SID {sid}")
+    print(f"Usuario {user_id} asociado al SID {sid}")
 
 
 @socketio.on("disconnect")
