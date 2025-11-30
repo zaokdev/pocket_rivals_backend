@@ -105,7 +105,9 @@ def other_player_pokemon(player_id):
         session = SessionLocal()
 
         all_pokemon = (
-            session.query(PokemonOwned, PokemonStat.name, Player.username)
+            session.query(
+                PokemonOwned, PokemonStat.name, PokemonStat.type1, Player.username
+            )
             .join(
                 PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
             )
@@ -122,12 +124,13 @@ def other_player_pokemon(player_id):
             )
 
         all_pokemon_json = []
-        for owned, name, username in all_pokemon:
+        for owned, name, type1, username in all_pokemon:
             all_pokemon_json.append(
                 {
                     "id": owned.id,
                     "name": name,
                     "owner": username,
+                    "type1": type1,
                     "pokedex_number": owned.pokedex_number,
                     "in_team": owned.in_team,
                     "obtained_at": owned.obtained_at,
