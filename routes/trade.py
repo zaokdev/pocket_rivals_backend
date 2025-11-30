@@ -211,19 +211,14 @@ def get_pending_trades():
     try:
         trades = (
             session.query(
-                Trade,
+                Trade.id.label("trade_id"),
                 Player.username.label("requester_name"),
-                PokemonOwned.label("requester_pokemon"),
-                PokemonStat.label("requester_stats"),
-                PokemonOwned,  # receiver pokemon
-                PokemonStat,  # receiver stats
+                PokemonStat.name.label("requester_pokemon_name"),
+                PokemonOwned.id.label("requester_pokemon_id"),
+                Trade.receiver_pokemon_id.label("receiver_pokemon_id"),
             )
             .join(Player, Player.id == Trade.requester_id)
             .join(PokemonOwned, PokemonOwned.id == Trade.requester_pokemon_id)
-            .join(
-                PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
-            )
-            .join(PokemonOwned, PokemonOwned.id == Trade.receiver_pokemon_id)
             .join(
                 PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
             )
@@ -232,26 +227,14 @@ def get_pending_trades():
         )
 
         result = []
-        for (
-            t,
-            requester_name,
-            requester_pokemon,
-            requester_stats,
-            receiver_pokemon,
-            receiver_stats,
-        ) in trades:
+        for row in trades:
             result.append(
                 {
-                    "trade_id": t.id,
-                    "from_user": requester_name,
-                    # Pokémon que ofrece
-                    "requester_pokemon_id": requester_pokemon.id,
-                    "requester_pokemon_name": requester_stats.name,
-                    "requester_pokedex": requester_pokemon.pokedex_number,
-                    # Pokémon que quiere obtener
-                    "receiver_pokemon_id": receiver_pokemon.id,
-                    "receiver_pokemon_name": receiver_stats.name,
-                    "receiver_pokedex": receiver_pokemon.pokedex_number,
+                    "trade_id": row.trade_id,
+                    "from_user": row.requester_name,
+                    "pokemon_name": row.requester_pokemon_name,
+                    "requester_pokemon_id": row.requester_pokemon_id,
+                    "receiver_pokemon_id": row.receiver_pokemon_id,
                 }
             )
 
