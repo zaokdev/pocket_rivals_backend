@@ -70,6 +70,50 @@ def request_pokemon():
 
     session = SessionLocal()
     try:
+        # Verificar si el Pokémon del requester ya está en un trade pendiente
+        existing_trade_requester = (
+            session.query(Trade)
+            .filter(
+                (
+                    (Trade.requester_pokemon_id == requester_pokemon_id)
+                    | (Trade.receiver_pokemon_id == requester_pokemon_id)
+                ),
+                Trade.status == TradeStatus.pending,
+            )
+            .first()
+        )
+
+        if existing_trade_requester:
+            return (
+                jsonify(
+                    {"message": "Este Pokémon ya está en un intercambio pendiente."}
+                ),
+                400,
+            )
+
+        # Verificar si el Pokémon del receiver ya está en un trade pendiente
+        existing_trade_receiver = (
+            session.query(Trade)
+            .filter(
+                (
+                    (Trade.requester_pokemon_id == receiver_pokemon_id)
+                    | (Trade.receiver_pokemon_id == receiver_pokemon_id)
+                ),
+                Trade.status == TradeStatus.pending,
+            )
+            .first()
+        )
+
+        if existing_trade_receiver:
+            return (
+                jsonify(
+                    {
+                        "message": "El Pokémon seleccionado ya está en un intercambio pendiente."
+                    }
+                ),
+                400,
+            )
+
         trade = Trade(
             id=str(uuid.uuid4()),
             requester_id=player_id,
