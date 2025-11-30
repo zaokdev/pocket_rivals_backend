@@ -30,7 +30,7 @@ class Player(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
     username: Mapped[str] = mapped_column(String(20), nullable=False)
     email: Mapped[str] = mapped_column(String(50), nullable=False)
-    password: Mapped[str] = mapped_column(String(100), nullable=False)
+    password: Mapped[str] = mapped_column(String(200), nullable=False)
     last_opened: Mapped[Optional[datetime.date]] = mapped_column(Date)
 
     pokeball_history: Mapped[list["PokeballHistory"]] = relationship(
