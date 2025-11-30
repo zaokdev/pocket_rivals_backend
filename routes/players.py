@@ -39,7 +39,7 @@ def register():
         if existingPlayer:
             raise FileExistsError("Player already registered")
 
-        hashed_password = bcrypt.generate_password_hash(password)
+        hashed_password = bcrypt.generate_password_hash(password).decode("utf-8")
 
         newPlayer = Player(
             id=id, username=username, email=email, password=hashed_password
