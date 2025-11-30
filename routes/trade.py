@@ -200,3 +200,38 @@ def deny_request():
         return jsonify({"message": str(e)}), 500
     finally:
         session.close()
+
+
+# Obtener todas las solicitudes de intercambio pendientes
+@trade.route("/trade/pending_requests", methods=["GET"])
+@jwt_required()
+def get_pending_trades():
+    player_id = get_jwt_identity()
+    session = SessionLocal()
+    try:
+        trades = (
+            session.query(Trade, Player.username, PokemonOwned)
+            .join(Player, Player.id == Trade.requester_id)
+            .join(PokemonOwned, PokemonOwned.id == Trade.requester_pokemon_id)
+            .filter(Trade.receiver_id == player_id, Trade.status == TradeStatus.pending)
+            .all()
+        )
+
+        result = []
+        for t, username, pokemon in trades:
+            result.append(
+                {
+                    "trade_id": t.id,
+                    "from_user": username,
+                    "pokemon_name": pokemon.pokedex_number,
+                    "pokemon_id": pokemon.id,
+                }
+            )
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+    finally:
+        session.close()
