@@ -14,8 +14,9 @@ from sqlalchemy import (
     String,
     Table,
     text,
+    Boolean,
+    func,
 )
-from sqlalchemy.dialects.mysql import TINYINT
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -51,7 +52,7 @@ class PokemonStat(Base):
     type2: Mapped[Optional[str]] = mapped_column(String(20))
     generation: Mapped[Optional[int]] = mapped_column(Integer)
     capture_rate: Mapped[Optional[int]] = mapped_column(Integer)
-    is_legendary: Mapped[Optional[int]] = mapped_column(TINYINT(1))
+    is_legendary: Mapped[Optional[bool]] = mapped_column(Boolean)
 
     pokeball_history: Mapped[list["PokeballHistory"]] = relationship(
         "PokeballHistory", back_populates="pokemon_stat"
@@ -66,11 +67,19 @@ t_friend = Table(
     Base.metadata,
     Column("id1", String(32), nullable=False),
     Column("id2", String(32), nullable=False),
-    Column("id_min", String(100), Computed("(least(`id1`,`id2`))", persisted=True)),
-    Column("id_max", String(100), Computed("(greatest(`id1`,`id2`))", persisted=True)),
-    Column("approved", TINYINT(1), nullable=False, server_default=text("'0'")),
+    Column(
+        "id_min",
+        String(100),
+        Computed(func.least(text("id1"), text("id2")), persisted=True),
+    ),
+    Column(
+        "id_max",
+        String(100),
+        Computed(func.greatest(text("id1"), text("id2")), persisted=True),
+    ),
+    Column("approved", Boolean, nullable=False, server_default=text("false")),
     Column("petitioner", String(100), nullable=False),
-    CheckConstraint("(`petitioner` in (`id1`,`id2`))", name="friend_chk_1"),
+    CheckConstraint("petitioner IN (id1, id2)", name="friend_chk_1"),
     ForeignKeyConstraint(["id1"], ["player.id"], name="friend_ibfk_1"),
     ForeignKeyConstraint(["id2"], ["player.id"], name="friend_ibfk_2"),
     ForeignKeyConstraint(["petitioner"], ["player.id"], name="friend_ibfk_3"),
@@ -129,7 +138,7 @@ class PokemonOwned(Base):
     id: Mapped[str] = mapped_column(String(24), primary_key=True)
     player_id: Mapped[str] = mapped_column(String(32), nullable=False)
     pokedex_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    in_team: Mapped[int] = mapped_column(TINYINT(1), nullable=False)
+    in_team: Mapped[bool] = mapped_column(Boolean, nullable=False)
     obtained_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
     mote: Mapped[Optional[str]] = mapped_column(String(20))
 
