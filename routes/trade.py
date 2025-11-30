@@ -334,3 +334,36 @@ def get_pending_trades():
 
     finally:
         session.close()
+
+
+# Obtener todas mis solicitudes de intercambio pendientes
+@trade.route("/trade/my_requests", methods=["GET"])
+@jwt_required()
+def get_my_outgoing_requests():
+    player_id = get_jwt_identity()
+    session = SessionLocal()
+    try:
+        trades = (
+            session.query(Trade)
+            .filter(Trade.requester_id == player_id)
+            .filter(Trade.status == TradeStatus.pending)
+            .all()
+        )
+
+        result = []
+        for t in trades:
+            result.append(
+                {
+                    "trade_id": t.id,
+                    "requester_pokemon_id": t.requester_pokemon_id,
+                    "receiver_pokemon_id": t.receiver_pokemon_id,
+                    "status": t.status.value,
+                }
+            )
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+    finally:
+        session.close()
