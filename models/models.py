@@ -33,6 +33,10 @@ class Player(Base):
     password: Mapped[str] = mapped_column(String(200), nullable=False)
     last_opened: Mapped[Optional[datetime.date]] = mapped_column(Date)
 
+    profile_picture: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="default.png"
+    )
+
     pokeball_history: Mapped[list["PokeballHistory"]] = relationship(
         "PokeballHistory", back_populates="user"
     )

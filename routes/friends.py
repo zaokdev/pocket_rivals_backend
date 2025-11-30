@@ -231,6 +231,7 @@ def list_friends():
                         "id": friend_player.id,
                         "username": friend_player.username,
                         "last_captured": last_captured[0] if last_captured else None,
+                        "profile_picture": friend_player.profile_picture,
                     }
                 )
 

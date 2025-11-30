@@ -132,3 +132,35 @@ def change_username():
 
     finally:
         session.close()
+
+
+@player.route("/player/change_profile_picture", methods=["PUT"])
+@jwt_required()
+def change_profile_picture():
+    session = SessionLocal()
+    try:
+        data = request.get_json()
+        new_picture = data.get("profile_picture")
+        player_id = get_jwt_identity()
+
+        if not new_picture:
+            return jsonify({"message": "Missing profile_picture"}), 400
+
+        # Obtener al usuario
+        player = session.query(Player).filter(Player.id == player_id).first()
+
+        if not player:
+            return jsonify({"message": "Player not found"}), 404
+
+        # Actualizar la foto de perfil
+        player.profile_picture = new_picture
+        session.commit()
+
+        return jsonify({"message": "Profile picture updated successfully"}), 200
+
+    except Exception as e:
+        session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+    finally:
+        session.close()

@@ -14,6 +14,7 @@ load_dotenv()
 
 init_db(app)
 jwt.init_app(app)
+socketio.init_app(app)
 
 app.register_blueprint(player)
 app.register_blueprint(capture_pokemon)
