@@ -6,25 +6,23 @@ from config.db import SessionLocal
 
 friends = Blueprint("friends", __name__)
 
+
 # CHECAR SOLICITUDES
-
-
 @friends.route("/friends/check_requests", methods=["GET"])
 @jwt_required()
 def get_requests():
+    session = SessionLocal()
     try:
         player_id = get_jwt_identity()
-        session = SessionLocal()
 
         requests = (
             session.query(t_friend, Player.username)
             .join(Player, Player.id == t_friend.c.petitioner)
             .filter(
-                (
-                    (t_friend.c.id1 == player_id) | (t_friend.c.id2 == player_id)
-                ),  # el user es parte
+                (t_friend.c.id1 == player_id)
+                | (t_friend.c.id2 == player_id),  # el user es parte
                 t_friend.c.petitioner != player_id,  # no fue él quien envió
-                t_friend.c.approved == 0,  # aún no aceptadas
+                t_friend.c.approved.is_(False),  # <--- antes 0
             )
             .all()
         )
@@ -53,6 +51,7 @@ def get_requests():
 @friends.route("/friends/send_request", methods=["POST"])
 @jwt_required()
 def send_request():
+    session = SessionLocal()
     try:
         data = request.get_json()
 
@@ -62,17 +61,34 @@ def send_request():
         if not receiver_id:
             raise ValueError("No receiver player id")
 
-        session = SessionLocal()
+        # evitar agregarse a sí mismo (muy importante)
+        if sender_id == receiver_id:
+            return jsonify({"message": "No puedes agregarte a ti mismo"}), 400
 
+        # verificar que exista el otro jugador
         receiver_player_data = (
             session.query(Player).filter(Player.id == receiver_id).first()
         )
-
         if not receiver_player_data:
             raise ValueError("That Player does not exist")
 
+        # evitar duplicados (opcional pero recomendable)
+        existing = (
+            session.query(t_friend)
+            .filter(
+                ((t_friend.c.id1 == sender_id) & (t_friend.c.id2 == receiver_id))
+                | ((t_friend.c.id1 == receiver_id) & (t_friend.c.id2 == sender_id))
+            )
+            .first()
+        )
+        if existing:
+            return jsonify({"message": "Friendship or request already exists"}), 400
+
         query = insert(t_friend).values(
-            id1=sender_id, id2=receiver_id, petitioner=sender_id
+            id1=sender_id,
+            id2=receiver_id,
+            petitioner=sender_id,
+            # approved se va a default (FALSE)
         )
 
         session.execute(query)
@@ -81,6 +97,7 @@ def send_request():
         return jsonify({"message": f"Sent friend request to {receiver_id}"}), 200
 
     except Exception as e:
+        session.rollback()
         return jsonify({"message": str(e)}), 500
 
     finally:
@@ -91,7 +108,7 @@ def send_request():
 @friends.route("/friends/accept_request", methods=["POST"])
 @jwt_required()
 def accept_request():
-    session = None
+    session = SessionLocal()
     try:
         data = request.get_json()
         friend_id = data.get("friend_id")
@@ -100,15 +117,12 @@ def accept_request():
         if not friend_id:
             return jsonify({"message": "friend_id is required"}), 400
 
-        session = SessionLocal()
-
-        # Buscar la relación en cualquier orden
         request_entry = (
             session.query(t_friend)
             .filter(
                 ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
                 | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id)),
-                t_friend.c.approved == 0,
+                t_friend.c.approved.is_(False),  # <--- antes 0
             )
             .first()
         )
@@ -116,37 +130,35 @@ def accept_request():
         if not request_entry:
             return jsonify({"message": "No pending request found"}), 404
 
-        # Actualizar approved -> 1
         session.execute(
             t_friend.update()
             .where(
                 ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
                 | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
             )
-            .values(approved=1)
+            .values(approved=True)  # <--- antes 1
         )
 
         session.commit()
 
         friend_player = session.query(Player).filter(Player.id == friend_id).first()
-        friend_name = friend_player.username
+        friend_name = friend_player.username if friend_player else friend_id
 
         return jsonify({"message": f"Friend request with {friend_name} accepted"}), 200
 
     except Exception as e:
-        if session:
-            session.rollback()
+        session.rollback()
         return jsonify({"message": str(e)}), 500
 
     finally:
-        if session:
-            session.close()
+        session.close()
 
 
 # RECHAZAR SOLICITUDES
 @friends.route("/friends/deny_request", methods=["DELETE"])
 @jwt_required()
 def deny_requests():
+    session = SessionLocal()
     try:
         data = request.get_json()
         friend_id = data.get("friend_id")
@@ -155,16 +167,13 @@ def deny_requests():
         if not friend_id:
             return jsonify({"message": "friend_id is required"}), 400
 
-        session = SessionLocal()
-
-        # Eliminar la solicitud
         session.execute(
             delete(t_friend).where(
                 (
                     ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
                     | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
                 )
-                & (t_friend.c.approved == 0)
+                & t_friend.c.approved.is_(False)  # <--- antes 0
             )
         )
 
@@ -173,6 +182,7 @@ def deny_requests():
         return jsonify({"message": f"Friend request denied"}), 200
 
     except Exception as e:
+        session.rollback()
         return jsonify({"message": str(e)}), 500
 
     finally:
@@ -183,16 +193,15 @@ def deny_requests():
 @friends.route("/friends/list", methods=["GET"])
 @jwt_required()
 def list_friends():
+    session = SessionLocal()
     try:
         player_id = get_jwt_identity()
-        session = SessionLocal()
 
-        # Buscar todas las relaciones donde el jugador esté en id1 o id2 y approved=1
         friend_entries = (
             session.query(t_friend)
             .filter(
-                ((t_friend.c.id1 == player_id) | (t_friend.c.id2 == player_id)),
-                t_friend.c.approved == 1,
+                (t_friend.c.id1 == player_id) | (t_friend.c.id2 == player_id),
+                t_friend.c.approved.is_(True),  # <--- antes 1
             )
             .all()
         )
@@ -200,9 +209,8 @@ def list_friends():
         if not friend_entries:
             return jsonify({"friends": []}), 200
 
-        friends = []
+        friends_list = []
         for entry in friend_entries:
-            # El amigo es el que NO es player_id
             friend_id = entry.id2 if entry.id1 == player_id else entry.id1
             friend_player = session.query(Player).filter(Player.id == friend_id).first()
 
@@ -218,17 +226,18 @@ def list_friends():
             )
 
             if friend_player:
-                friends.append(
+                friends_list.append(
                     {
                         "id": friend_player.id,
                         "username": friend_player.username,
-                        "last_captured": last_captured.name if last_captured else None,
+                        "last_captured": last_captured[0] if last_captured else None,
                     }
                 )
 
-        return jsonify({"friends": friends}), 200
+        return jsonify({"friends": friends_list}), 200
 
     except Exception as e:
+        session.rollback()
         return jsonify({"message": str(e)}), 500
 
     finally:
@@ -239,6 +248,7 @@ def list_friends():
 @friends.route("/friends/remove", methods=["DELETE"])
 @jwt_required()
 def remove_friend():
+    session = SessionLocal()
     try:
         data = request.get_json()
         friend_id = data.get("friend_id")
@@ -247,13 +257,13 @@ def remove_friend():
         if not friend_id:
             return jsonify({"message": "friend_id is required"}), 400
 
-        session = SessionLocal()
-
         result = session.execute(
             t_friend.delete().where(
-                ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
-                | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id)),
-                t_friend.c.approved == 1,
+                (
+                    ((t_friend.c.id1 == player_id) & (t_friend.c.id2 == friend_id))
+                    | ((t_friend.c.id1 == friend_id) & (t_friend.c.id2 == player_id))
+                )
+                & t_friend.c.approved.is_(True)  # <--- antes 1
             )
         )
 
@@ -265,6 +275,7 @@ def remove_friend():
         return jsonify({"message": f"Friendship with {friend_id} removed"}), 200
 
     except Exception as e:
+        session.rollback()
         return jsonify({"message": str(e)}), 500
 
     finally:
