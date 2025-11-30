@@ -1,19 +1,14 @@
 from flask import Flask
 from dotenv import load_dotenv
 from config.db import init_db
-from flask_jwt_extended import JWTManager
 from routes.friends import friends
 from routes.pokemon_owned import pokemon_owned
 from routes.players import player
 from routes.capture import capture_pokemon
 from routes.trade import trade
-from flask_socketio import SocketIO
-
-socketio = SocketIO(cors_allowed_origins="*")
+from extensions import socketio, jwt
 
 app = Flask(__name__)
-
-jwt = JWTManager()
 
 load_dotenv()
 

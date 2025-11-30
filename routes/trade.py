@@ -6,7 +6,8 @@ from models.models import Trade, TradeStatus, Player, PokemonOwned, PokemonStat
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import aliased
-from events import socketio, connected_users
+from events import connected_users
+from extensions import socketio
 
 trade = Blueprint("trade", __name__)
 

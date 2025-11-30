@@ -1,6 +1,5 @@
 from flask import request
-from app import socketio
-
+from extensions import socketio
 
 connected_users = {}
 
