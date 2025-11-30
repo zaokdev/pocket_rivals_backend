@@ -7,6 +7,9 @@ from routes.pokemon_owned import pokemon_owned
 from routes.players import player
 from routes.capture import capture_pokemon
 from routes.trade import trade
+from flask_socketio import SocketIO
+
+socketio = SocketIO(cors_allowed_origins="*")
 
 app = Flask(__name__)
 
@@ -24,4 +27,4 @@ app.register_blueprint(friends)
 app.register_blueprint(trade)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000)

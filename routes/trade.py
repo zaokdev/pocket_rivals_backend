@@ -6,6 +6,7 @@ from models.models import Trade, TradeStatus, Player, PokemonOwned, PokemonStat
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import aliased
+from events import socketio, connected_users
 
 trade = Blueprint("trade", __name__)
 
@@ -93,12 +94,13 @@ def request_pokemon():
 @trade.route("/trade/confirm", methods=["POST"])
 @jwt_required()
 def confirm_request():
+
     player_id = get_jwt_identity()
     data = request.get_json()
     trade_id = data.get("trade_id")
 
     if not trade_id:
-        return jsonify({"message": "Trade_id is neccesary for this method"}), 400
+        return jsonify({"message": "Trade_id is necessary"}), 400
 
     session = SessionLocal()
 
@@ -106,13 +108,10 @@ def confirm_request():
         trade = session.query(Trade).filter(Trade.id == trade_id).first()
 
         if not trade:
-            return jsonify({"message": "That pending trade doesn't exist"}), 404
+            return jsonify({"message": "Trade not found"}), 404
 
         if trade.receiver_id != player_id:
-            return (
-                jsonify({"message": "You are not authorized to confirm this trade"}),
-                403,
-            )
+            return jsonify({"message": "You cannot confirm this trade"}), 403
 
         if trade.status != TradeStatus.pending:
             return jsonify({"message": "Trade already decided"}), 400
@@ -132,10 +131,7 @@ def confirm_request():
         )
 
         if not requester_pokemon or not receiver_pokemon:
-            return (
-                jsonify({"message": "One of the Pokémon in this trade does not exist"}),
-                404,
-            )
+            return jsonify({"message": "Pokémon missing"}), 404
 
         requester_pokemon.player_id, receiver_pokemon.player_id = (
             receiver_pokemon.player_id,
@@ -144,17 +140,29 @@ def confirm_request():
 
         session.commit()
 
-        return (
-            jsonify(
+        requester_id = trade.requester_id
+
+        if requester_id in connected_users:
+            print("Enviando notificación al usuario:", requester_id)
+
+            socketio.emit(
+                "trade_accepted",
                 {
-                    "message": f"Trade with id: {trade_id} has been confirmed successfully"
-                }
-            ),
-            202,
-        )
+                    "trade_id": trade_id,
+                    "message": "Tu intercambio fue aceptado",
+                    "accepted_by": player_id,
+                },
+                room=connected_users[requester_id],
+            )
+        else:
+            print("Usuario no conectado, no se puede enviar WS")
+
+        return jsonify({"message": "Trade confirmed successfully"}), 202
+
     except Exception as e:
         session.rollback()
         return jsonify({"message": str(e)}), 500
+
     finally:
         session.close()
 
