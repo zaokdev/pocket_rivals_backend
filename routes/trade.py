@@ -5,6 +5,7 @@ from config.db import SessionLocal
 from models.models import Trade, TradeStatus, Player, PokemonOwned, PokemonStat
 import uuid
 from datetime import datetime
+from sqlalchemy.orm import aliased
 
 trade = Blueprint("trade", __name__)
 
@@ -208,21 +209,43 @@ def deny_request():
 def get_pending_trades():
     player_id = get_jwt_identity()
     session = SessionLocal()
+
+    # Aliases for clean joins
+    RequesterOwned = aliased(PokemonOwned)
+    ReceiverOwned = aliased(PokemonOwned)
+    RequesterStat = aliased(PokemonStat)
+    ReceiverStat = aliased(PokemonStat)
+
     try:
         trades = (
             session.query(
                 Trade.id.label("trade_id"),
+                # requester info
                 Player.username.label("requester_name"),
-                PokemonStat.name.label("requester_pokemon_name"),
-                PokemonOwned.id.label("requester_pokemon_id"),
-                Trade.receiver_pokemon_id.label("receiver_pokemon_id"),
+                RequesterStat.name.label("requester_pokemon_name"),
+                RequesterStat.pokedex_number.label("requester_pokedex"),
+                RequesterOwned.id.label("requester_pokemon_id"),
+                # receiver info (your Pokémon)
+                ReceiverOwned.id.label("receiver_pokemon_id"),
+                ReceiverStat.name.label("receiver_pokemon_name"),
+                ReceiverStat.pokedex_number.label("receiver_pokedex"),
             )
+            # JOINS for requester
             .join(Player, Player.id == Trade.requester_id)
-            .join(PokemonOwned, PokemonOwned.id == Trade.requester_pokemon_id)
+            .join(RequesterOwned, RequesterOwned.id == Trade.requester_pokemon_id)
             .join(
-                PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
+                RequesterStat,
+                RequesterStat.pokedex_number == RequesterOwned.pokedex_number,
             )
-            .filter(Trade.receiver_id == player_id, Trade.status == TradeStatus.pending)
+            # JOINS for receiver (you)
+            .join(ReceiverOwned, ReceiverOwned.id == Trade.receiver_pokemon_id)
+            .join(
+                ReceiverStat,
+                ReceiverStat.pokedex_number == ReceiverOwned.pokedex_number,
+            )
+            # Only trades pending for this player
+            .filter(Trade.receiver_id == player_id)
+            .filter(Trade.status == TradeStatus.pending)
             .all()
         )
 
@@ -232,16 +255,21 @@ def get_pending_trades():
                 {
                     "trade_id": row.trade_id,
                     "from_user": row.requester_name,
-                    "pokemon_name": row.requester_pokemon_name,
+                    # offered Pokémon (their Pokémon)
+                    "pokemon_offered": row.requester_pokemon_name,
+                    "pokemon_offered_number": row.requester_pokedex,
                     "requester_pokemon_id": row.requester_pokemon_id,
-                    "receiver_pokemon_id": row.receiver_pokemon_id,
+                    # your Pokémon
+                    "your_pokemon_name": row.receiver_pokemon_name,
+                    "your_pokemon_number": row.receiver_pokedex,
+                    "your_pokemon_id": row.receiver_pokemon_id,
                 }
             )
 
         return jsonify(result), 200
 
     except Exception as e:
-        print("\n🔥 ERROR EN TRADE REQUESTS:", e, "\n")
+        print("🔥 ERROR EN TRADE REQUESTS:", e)
         return jsonify({"message": str(e)}), 500
 
     finally:
