@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from config.db import SessionLocal
-from models.models import Trade, TradeStatus, Player, PokemonOwned
+from models.models import Trade, TradeStatus, Player, PokemonOwned, PokemonStat
 import uuid
 from datetime import datetime
 
@@ -210,21 +210,48 @@ def get_pending_trades():
     session = SessionLocal()
     try:
         trades = (
-            session.query(Trade, Player.username, PokemonOwned)
+            session.query(
+                Trade,
+                Player.username.label("requester_name"),
+                PokemonOwned.label("requester_pokemon"),
+                PokemonStat.label("requester_stats"),
+                PokemonOwned,  # receiver pokemon
+                PokemonStat,  # receiver stats
+            )
             .join(Player, Player.id == Trade.requester_id)
             .join(PokemonOwned, PokemonOwned.id == Trade.requester_pokemon_id)
+            .join(
+                PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
+            )
+            .join(PokemonOwned, PokemonOwned.id == Trade.receiver_pokemon_id)
+            .join(
+                PokemonStat, PokemonStat.pokedex_number == PokemonOwned.pokedex_number
+            )
             .filter(Trade.receiver_id == player_id, Trade.status == TradeStatus.pending)
             .all()
         )
 
         result = []
-        for t, username, pokemon in trades:
+        for (
+            t,
+            requester_name,
+            requester_pokemon,
+            requester_stats,
+            receiver_pokemon,
+            receiver_stats,
+        ) in trades:
             result.append(
                 {
                     "trade_id": t.id,
-                    "from_user": username,
-                    "pokemon_name": pokemon.pokedex_number,
-                    "pokemon_id": pokemon.id,
+                    "from_user": requester_name,
+                    # Pokémon que ofrece
+                    "requester_pokemon_id": requester_pokemon.id,
+                    "requester_pokemon_name": requester_stats.name,
+                    "requester_pokedex": requester_pokemon.pokedex_number,
+                    # Pokémon que quiere obtener
+                    "receiver_pokemon_id": receiver_pokemon.id,
+                    "receiver_pokemon_name": receiver_stats.name,
+                    "receiver_pokedex": receiver_pokemon.pokedex_number,
                 }
             )
 
