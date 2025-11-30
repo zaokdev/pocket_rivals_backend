@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from config.db import SessionLocal
-from models.models import Trade, TradeStatus, Player, PokemonOwned, PokemonStat, User
+from models.models import Trade, TradeStatus, Player, PokemonOwned, PokemonStat
 import uuid
 from datetime import datetime
 from sqlalchemy.orm import aliased
@@ -118,9 +118,11 @@ def confirm_request():
             return jsonify({"message": "Trade already decided"}), 400
 
         requester_user = (
-            session.query(User).filter(User.id == trade.requester_id).first()
+            session.query(Player).filter(Player.id == trade.requester_id).first()
         )
-        receiver_user = session.query(User).filter(User.id == trade.receiver_id).first()
+        receiver_user = (
+            session.query(Player).filter(Player.id == trade.receiver_id).first()
+        )
 
         trade.status = TradeStatus.accepted
         trade.decided_at = datetime.now()
