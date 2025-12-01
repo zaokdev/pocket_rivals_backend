@@ -397,6 +397,10 @@ def get_blocked_pokemon(friend_id):
             blocked_pokemon_ids.append(trade.requester_pokemon_id)
             blocked_pokemon_ids.append(trade.receiver_pokemon_id)
 
+        print(
+            f"Bloqueados de {friend_id}: {blocked_pokemon_ids}"
+        )  # Verifica si los Pokémon están correctos.
+
         return jsonify({"blocked_pokemon_ids": blocked_pokemon_ids}), 200
 
     except Exception as e:
