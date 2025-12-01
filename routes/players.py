@@ -149,13 +149,11 @@ def change_profile_picture():
         if not new_picture:
             return jsonify({"message": "Missing profile_picture"}), 400
 
-        # Obtener al usuario
         player = session.query(Player).filter(Player.id == player_id).first()
 
         if not player:
             return jsonify({"message": "Player not found"}), 404
 
-        # Actualizar la foto de perfil
         player.profile_picture = new_picture
         session.commit()
 
@@ -163,6 +161,34 @@ def change_profile_picture():
 
     except Exception as e:
         session.rollback()
+        return jsonify({"message": str(e)}), 500
+
+    finally:
+        session.close()
+
+
+@player.route("/player/<id>", methods=["GET"])
+@jwt_required()
+def get_player(id):
+    try:
+        session = SessionLocal()
+        player = session.query(Player).filter(Player.id == id).first()
+
+        if not player:
+            return jsonify({"message": "Player not found"}), 404
+
+        return (
+            jsonify(
+                {
+                    "id": player.id,
+                    "username": player.username,
+                    "profile_picture": player.profile_picture,
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
         return jsonify({"message": str(e)}), 500
 
     finally:
