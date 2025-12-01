@@ -367,3 +367,39 @@ def get_my_outgoing_requests():
         return jsonify({"message": str(e)}), 500
     finally:
         session.close()
+
+
+# Obtener los Pokémon bloqueados de un amigo
+@trade.route("/trade/blocked_pokemon/<string:friend_id>", methods=["GET"])
+@jwt_required()
+def get_blocked_pokemon(friend_id):
+    player_id = get_jwt_identity()
+    session = SessionLocal()
+
+    try:
+        trades = (
+            session.query(Trade)
+            .filter(
+                (
+                    (Trade.requester_id == friend_id)
+                    & (Trade.status == TradeStatus.pending)
+                )
+                | (
+                    (Trade.receiver_id == friend_id)
+                    & (Trade.status == TradeStatus.pending)
+                )
+            )
+            .all()
+        )
+
+        blocked_pokemon_ids = []
+        for trade in trades:
+            blocked_pokemon_ids.append(trade.requester_pokemon_id)
+            blocked_pokemon_ids.append(trade.receiver_pokemon_id)
+
+        return jsonify({"blocked_pokemon_ids": blocked_pokemon_ids}), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+    finally:
+        session.close()
