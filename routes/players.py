@@ -85,7 +85,10 @@ def login():
         access_token = create_access_token(
             identity=player.id,
             expires_delta=expires,
-            additional_claims={"user": player.username},
+            additional_claims={
+                "user": player.username,
+                "profile_picture": player.profile_picture,
+            },
         )
         session.commit()
         return jsonify({"access_token": access_token}), 200
