@@ -149,31 +149,17 @@ def change_profile_picture():
         if not new_picture:
             return jsonify({"message": "Missing profile_picture"}), 400
 
+        # Obtener al usuario
         player = session.query(Player).filter(Player.id == player_id).first()
 
         if not player:
             return jsonify({"message": "Player not found"}), 404
 
+        # Actualizar la foto de perfil
         player.profile_picture = new_picture
         session.commit()
 
-        new_token = create_access_token(
-            identity=player.id,
-            additional_claims={
-                "user": player.username,
-                "profile_picture": player.profile_picture,
-            },
-        )
-
-        return (
-            jsonify(
-                {
-                    "message": "Profile picture updated successfully",
-                    "access_token": new_token,
-                }
-            ),
-            200,
-        )
+        return jsonify({"message": "Profile picture updated successfully"}), 200
 
     except Exception as e:
         session.rollback()
